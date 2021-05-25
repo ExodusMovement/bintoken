@@ -1,17 +1,19 @@
 {
-  "name": "@exodus/linter-boilerplate",
-  "private": true,
+  "name": "@exodus/bintoken",
   "version": "0.1.0",
-  "description": "Insert description here.",
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "Binary encoding of named fixed-length buffers.",
   "author": "Exodus Movement Inc",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ExodusMovement/linter-boilerplate.git"
+    "url": "git+https://github.com/ExodusMovement/bintoken.git"
   },
-  "homepage": "https://github.com/ExodusMovement/linter-boilerplate#readme",
+  "homepage": "https://github.com/ExodusMovement/bintoken#readme",
   "license": "UNLICENSED",
   "bugs": {
-    "url": "https://github.com/ExodusMovement/linter-boilerplate/issues"
+    "url": "https://github.com/ExodusMovement/bintoken/issues"
   },
   "main": "src/index.js",
   "engines": {
