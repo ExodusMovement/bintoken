@@ -1,27 +1,57 @@
-# Linter Boilerplate
+# Bintoken
 
-This repository is meant to be used as a Github template repo for creating miscellaneous NPM packages or even to bootstrap a monorepo.
+A bintoken is an encoded binary message of a fixed length, meant to serve as a message which can be signed. Depending on the type byte, and who signed the bintoken, the message may hold different meanings.
 
-It comes with `eslint` and `prettier` preconfigured according to standard Exodus configurations.
+For example, if the type indicates the message is an authentication token, and the bintoken is signed by a server's private key, this might provide a guarantee that the server verified some information at the time indicated in the bintoken.
 
-## Instructions
+The encoding format of the token is specified in-advance by instantiating the `BintokenEncoding` class exported by this package. The encoding is specified with property names and lengths for each property. The key names are sorted alphabetically when encoding and decoding bintokens.
 
-**1. Create a new repository.**
+The deterministic binary format simplifies signature verification. Its fixed length simplifies decoding & validation, and thus reduces the chance for malicious exploitation. Unlike with other formats such as JSON, there is only _one_ way to encode a message within a bintoken encoding scheme.
 
-![Screenshot_2021-04-07_17-36-28](https://user-images.githubusercontent.com/31221309/113951183-e8813500-97c7-11eb-8edf-c80c33b98ac7.png)
+Here is the generic serialization format of any bintoken encoding:
 
-**2. Select this repo as your template.**
+- type (1 byte) : a version number which can be used to identify the context of the message.
+- [...payload properties]
+- time (4 bytes) : the timestamp (in unix seconds) when the message was created, encoded as a big-endian uint32.
 
-![Screenshot_2021-04-07_17-40-50](https://user-images.githubusercontent.com/31221309/113951526-912f9480-97c8-11eb-9593-b1cdff2048ac.png)
+## Example
 
-**3. Customize the `package.json` file for your purposes.**
+Here is an example of a bintoken encoding which encodes only a 32-byte public key as the payload:
 
-- Fix the package name from `@exodus/linter-boilerplate`. Generally, best practice is to mirror the new repo's name in the package name: `@exodus/<repo_name>`.
-- Remove `"private": true` if this is a package you intend to publish to NPM.
-- Add a description.
-- Update the `repository`, `bugs`, and `homepage` URLs to point to your new repository instead of to `ExodusMovement/linter-boilerplate`.
-- Specify the license if applicable.
+```js
+const BintokenEncoding = require('@exodus/bintoken')
 
-**4. Overwrite this README file with your own documentation.**
+const tokenEncoding = new BintokenEncoding({ publicKey: 32, hash: 20 })
 
-**5. Start adding your own code!**
+const token = tokenEncoding.toBuffer({
+  type: 1,
+  publicKey: randomBytes(32),
+  hash: randomBytes(20),
+})
+
+/*
+  // Erroneous use
+  const token = tokenEncoding.toBuffer({ type: 1, publicKey: randomBytes(32), hash: randomBytes(20), otherProp: Buffer.alloc(0) })
+  const token = tokenEncoding.toBuffer({ type: 1, publicKey: randomBytes(31), hash: randomBytes(20) })
+  const token = tokenEncoding.toBuffer({ type: 1, publicKey: 'foo', hash: randomBytes(20) })
+  const token = tokenEncoding.toBuffer({ type: 1 })
+*/
+
+const { type, time, publicKey, hash } = tokenEncoding.fromBuffer(token)
+
+/*
+  // Error, wrong length
+  const { type, time, publicKey } = tokenEncoding.fromBuffer(
+    Buffer.concat([token, Buffer.alloc(1)])
+  )
+*/
+```
+
+In this example, the serialization format is:
+
+- type (1 byte) : a version number which can be used to identify the context of the message.
+- hash (20) bytes : a hash over which the message holds meaning (as implied by the type).
+- public key (32 bytes) : the public key over which the message holds meaning (as implied by the type).
+- time (4 bytes) : the timestamp (in seconds) when the message was created, encoded as a big-endian uint32.
+
+Notice that `hash` is written _before_ `publicKey` in the payload, as the properties are sorted alphabetically before being written to, or read from, a bintoken. This means **the keys you choose for your message must be the same for different applications using the same bintokens.**
